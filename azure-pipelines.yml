@@ -1,0 +1,49 @@
+trigger: none
+
+pool:
+  name: default
+  demands: 
+  - käse
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+
+- task: DotNetCoreCLI@2
+  displayName: NuGet Restore
+  inputs:
+    command: 'restore'
+    projects: '**/*.csproj'
+
+- task: DotNetCoreCLI@2
+  displayName: dotnet build
+  inputs:
+    command: 'build'
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: dotnet publish as single exe Datei für 🎐
+  inputs:
+    command: 'publish'
+    publishWebProjects: false
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration) --framework net7.0 --self-contained True --runtime win-x86 --verbosity Normal /property:PublishSingleFile=True /property:IncludeNativeLibrariesForSelfExtract=True /property:DebugType=None /property:DebugSymbols=False /property:IncludeAllContentForSelfExtract=true'
+    zipAfterPublish: false
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+  inputs:
+    SourceFolder: '$(system.defaultworkingdirectory)'
+    Contents: '**\bin\$(BuildConfiguration)\**\publish\**'
+    TargetFolder: '$(build.artifactstagingdirectory)'
+  condition: succeededOrFailed()
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: drop'
+  inputs:
+    PathtoPublish: '$(build.artifactstagingdirectory)'
+  condition: succeededOrFailed()
+
+
